@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abu Vaqt | Smart Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" href="./loho.png" type="image/x-icon">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; transition: all 0.4s ease; }
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #1e293b, #0f172a, #020617);
+            overflow: hidden;
+            perspective: 2000px;
+            color: white;
+        }
+
+        /* Viloyat tanlash menyusi - Ro'yxatni ko'rinadigan qilish */
+        .selector-wrapper {
+            position: absolute;
+            top: 20px;
+            z-index: 1000;
+        }
+
+        #region-picker {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            width: 250px;
+        }
+
+        /* Ro'yxat ichidagi variantlar dizayni */
+        #region-picker option {
+            background: #1e293b;
+            color: white;
+            padding: 10px;
+        }
+
+        /* Asosiy Glass Karta */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(60px) saturate(210%);
+            -webkit-backdrop-filter: blur(60px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 60px;
+            padding: 50px 80px;
+            width: 90%;
+            max-width: 1100px;
+            text-align: center;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.6);
+            transform-style: preserve-3d;
+        }
+
+        /* Ob-havo qismi */
+        .weather-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            transform: translateZ(50px);
+        }
+        .city-title { font-size: 28px; font-weight: 900; color: #38bdf8; text-align: left; }
+        .temp-val { font-size: 45px; font-weight: 900; color: #fbbf24; }
+
+        /* SOAT - Eng katta o'lcham */
+        .main-clock {
+            margin: 20px 0;
+            transform: translateZ(150px);
+        }
+        .time-box { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
+        #time {
+            font-size: 200px;
+            font-weight: 900;
+            line-height: 0.8;
+            letter-spacing: -10px;
+            background: linear-gradient(to bottom, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        #seconds { font-size: 70px; color: #38bdf8; font-weight: 300; width: 100px; text-align: left; }
+
+        /* Sana - M harfisiz */
+        #date { font-size: 32px; margin-bottom: 30px; opacity: 0.8; letter-spacing: 2px; }
+
+        /* Budilnik & Taymer tugmalari */
+        .nav-bar { display: flex; justify-content: center; gap: 15px; margin-top: 30px; }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .nav-btn.active { background: #38bdf8; color: #0f172a; }
+
+        .content-section { display: none; transform: translateZ(100px); }
+        .content-section.active { display: block; animation: slideIn 0.5s ease; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; border-radius: 10px; margin: 10px; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+    <audio id="alarm-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" loop></audio>
+
+    <div class="selector-wrapper">
+        <select id="region-picker" onchange="updateDashboard()">
+            <option value="Andijon">Andijon</option>
+            <option value="Buxoro">Buxoro</option>
+            <option value="Farg'ona">Farg'ona</option>
+            <option value="Jizzax">Jizzax</option>
+            <option value="Namangan">Namangan</option>
+            <option value="Navoiy">Navoiy</option>
+            <option value="Qashqadaryo" selected>Qashqadaryo</option>
+            <option value="Qoraqalpog'iston">Qoraqalpog'iston</option>
+            <option value="Samarqand">Samarqand</option>
+            <option value="Sirdaryo">Sirdaryo</option>
+            <option value="Surxondaryo">Surxondaryo</option>
+            <option value="Toshkent">Toshkent</option>
+            <option value="Xorazm">Xorazm</option>
+        </select>
+    </div>
+
+    <div class="glass-card" id="card">
+        <div class="weather-panel">
+            <div>
+                <div class="city-title" id="display-city">Qashqadaryo</div>
+                <div id="weather-status" style="opacity: 0.6;">Musaffo osmon</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="temp-val" id="display-temp">28°C</div>
+                <div style="font-size: 14px; opacity: 0.6;">Namlik: <span id="display-hum">30%</span></div>
+            </div>
+        </div>
+
+        <div id="clock-sec" class="content-section active">
+            <div class="time-box">
+                <span id="time">00:00</span>
+                <span id="seconds">00</span>
+            </div>
+            <div id="date">01 28, Wed</div>
+        </div>
+
+        <div id="alarm-sec" class="content-section">
+            <h2 style="margin-bottom: 15px;">Budilnik O'rnatish</h2>
+            <input type="time" id="alarmTime">
+            <button class="nav-btn" style="background:#38bdf8" onclick="setAlarm()">Saqlash</button>
+            <button id="stopBtn" class="nav-btn" style="background:#ef4444; display:none" onclick="stopSound()">Ovozni To'xtatish</button>
+        </div>
+
+        <div id="timer-sec" class="content-section">
+            <h2 style="margin-bottom: 15px;">Taymer</h2>
+            <input type="number" id="timerInp" placeholder="Sekundlarni kiriting">
+            <button class="nav-btn" style="background:#38bdf8" onclick="startTimer()">Start</button>
+            <div id="timerDisp" style="font-size: 80px; font-weight: 900; margin-top: 10px;">0</div>
+        </div>
+
+        <div class="nav-bar">
+            <button class="nav-btn active" onclick="switchTab('clock-sec', this)">Soat</button>
+            <button class="nav-btn" onclick="switchTab('alarm-sec', this)">Budilnik</button>
+            <button class="nav-btn" onclick="switchTab('timer-sec', this)">Taymer</button>
+        </div>
+    </div>
+
+    <script>
+        const weatherDB = {
+            "Andijon": { t: "22°C", h: "55%", s: "Buloqli" },
+            "Buxoro": { t: "30°C", h: "20%", s: "Issiq" },
+            "Farg'ona": { t: "23°C", h: "48%", s: "Musaffo" },
+            "Jizzax": { t: "26°C", h: "35%", s: "Shamolli" },
+            "Namangan": { t: "22°C", h: "50%", s: "Ochiq osmon" },
+            "Navoiy": { t: "29°C", h: "25%", s: "Quyoshli" },
+            "Qashqadaryo": { t: "28°C", h: "30%", s: "Musaffo osmon" },
+            "Qoraqalpog'iston": { t: "27°C", h: "22%", s: "Quruq" },
+            "Samarqand": { t: "25°C", h: "40%", s: "Tiniq" },
+            "Sirdaryo": { t: "27°C", h: "38%", s: "Issiq" },
+            "Surxondaryo": { t: "33°C", h: "15%", s: "Juda issiq" },
+            "Toshkent": { t: "24°C", h: "45%", s: "Buloqli" },
+            "Xorazm": { t: "26°C", h: "33%", s: "Ochiq" }
+        };
+
+        function updateDashboard() {
+            const city = document.getElementById('region-picker').value;
+            const data = weatherDB[city];
+            document.getElementById('display-city').textContent = city;
+            document.getElementById('display-temp').textContent = data.t;
+            document.getElementById('display-hum').textContent = data.h;
+            document.getElementById('weather-status').textContent = data.s;
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('time').textContent = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('seconds').textContent = now.getSeconds().toString().padStart(2, '0');
+            const options = { month: '2-digit', day: '2-digit', weekday: 'short' };
+            document.getElementById('date').textContent = now.toLocaleDateString('en-US', options);
+
+            if(alarmTime === now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0')) {
+                document.getElementById('alarm-sound').play();
+                document.getElementById('stopBtn').style.display = 'inline';
+            }
+        }
+
+        function switchTab(id, btn) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        let alarmTime = null;
+        function setAlarm() { alarmTime = document.getElementById('alarmTime').value; alert("O'rnatildi: " + alarmTime); }
+        function stopSound() { document.getElementById('alarm-sound').pause(); document.getElementById('stopBtn').style.display = 'none'; alarmTime = null; }
+
+        function startTimer() {
+            let s = parseInt(document.getElementById('timerInp').value);
+            const disp = document.getElementById('timerDisp');
+            const interval = setInterval(() => {
+                s--; disp.textContent = s;
+                if(s <= 0) { clearInterval(interval); document.getElementById('alarm-sound').play(); }
+            }, 1000);
+        }
+
+        // 3D Harakat
+        const card = document.getElementById('card');
+        document.addEventListener('mousemove', (e) => {
+            let x = (window.innerWidth / 2 - e.pageX) / 45;
+            let y = (window.innerHeight / 2 - e.pageY) / 45;
+            card.style.transform = `rotateY(${-x}deg) rotateX(${y}deg)`;
+        });
+
+        setInterval(updateClock, 1000);
+        updateClock();
+        updateDashboard();
+    </script>
+</body>
+</html>
